@@ -26,9 +26,12 @@ def load_wav_16k_mono(filename):
 wave = load_wav_16k_mono(CAPUCHIN_FILE)
 nwave = load_wav_16k_mono(NOT_CAPUCHIN_FILE)
 
+#plots the audio files into a visual wave
+'''
 plt.plot(wave)
 plt.plot(nwave)
 plt.show()
+'''
 
 POS = os.path.join('data', 'Parsed_Capuchinbird_Clips')
 NEG = os.path.join('data', 'Parsed_Not_Capuchinbird_Clips')
@@ -37,10 +40,29 @@ pos = tf.data.Dataset.list_files(POS+'\*.wav')
 pos.as_numpy_iterator().next()
 neg = tf.data.Dataset.list_files(NEG+'\*.wav')
 
-pos.as_numpy_iterator().next()
+positives = tf.data.Dataset.zip((pos, tf.data.Dataset.from_tensor_slices(tf.ones(len(pos)))))#returns one binary flag for positive examples
+negatives = tf.data.Dataset.zip((neg, tf.data.Dataset.from_tensor_slices(tf.zeros(len(neg)))))#returns zeros for negative examples
+data = positives.concatenate(negatives)#puts the two data sets together
 
-positives = tf.data.Dataset.zip((pos, tf.data.Dataset.from_tensor_slices(tf.ones(len(pos)))))
-negatives = tf.data.Dataset.zip((neg, tf.data.Dataset.from_tensor_slices(tf.zeros(len(neg)))))
-positives.concatenate(negatives)
+print(data.shuffle(1000).as_numpy_iterator().next())
 
-print(tf.ones(len(pos)))
+lengths = []
+for file in os.listdir(os.path.join('data', 'Parsed_Capuchinbird_Clips')):
+    tensor_wave = load_wav_16k_mono(os.path.join('data', 'Parsed_Capuchinbird_Clips', file))
+    lengths.append(len(tensor_wave))
+
+print(tf.math.reduce_mean(lengths))
+print(tf.math.reduce_min(lengths))#prints minimum wave length
+tf.math.reduce_max(lengths)#prints maximum wave length
+
+def preprocess(file_path, label): 
+    wav = load_wav_16k_mono(file_path)
+    wav = wav[:48000]
+    zero_padding = tf.zeros([48000] - tf.shape(wav), dtype=tf.float32)#adds zeros at the start of clips that are less than 48000(can be changed) in size
+    wav = tf.concat([zero_padding, wav],0)#adds the padding with the wav
+    spectrogram = tf.signal.stft(wav, frame_length=320, frame_step=32)
+    spectrogram = tf.abs(spectrogram)#all positive examples
+    spectrogram = tf.expand_dims(spectrogram, axis=2)
+    return spectrogram, label
+
+
