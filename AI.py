@@ -65,4 +65,10 @@ def preprocess(file_path, label):
     spectrogram = tf.expand_dims(spectrogram, axis=2)
     return spectrogram, label
 
+filepath, label = positives.shuffle(buffer_size=10000).as_numpy_iterator().next()#grabs random audio clip from 'positives'
+spectrogram, label = preprocess(filepath, label)
+print(spectrogram)
+plt.figure(figsize=(30,20))
+plt.imshow(tf.transpose(spectrogram)[0])
+plt.show()
 
